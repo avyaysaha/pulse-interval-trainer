@@ -6,7 +6,7 @@ A dependency-free interval training web app built with **HTML, CSS, and vanilla 
 
 - Customize **work seconds (1–3600)**, **rest seconds (0–3600)**, **rounds (1–99)**, and **get-ready countdown (0–60 seconds)**.
 - Start, pause/resume, skip, and reset.
-- HIIT, Tabata, and Endurance presets; type precise values or use the +/- controls.
+- HIIT, Tabata, Endurance, and **Speed Ramp** treadmill presets; type precise values or use the +/- controls.
 - Animated countdown ring, round counter, overall progress, and session duration estimate.
 - Optional audio tones and mobile vibration on phase changes.
 - Remembers your settings locally in the browser.
@@ -16,6 +16,8 @@ A dependency-free interval training web app built with **HTML, CSS, and vanilla 
 - Keyboard shortcuts: **Space** start/pause/resume; **Right Arrow** skip; **R** reset (when not focused on a control).
 
 **Timing:** One work interval counts as one round. Rest happens *between* rounds, not after the last round. Set rest to `0` for back-to-back work rounds. Prep occurs once at the beginning.
+
+**Speed Ramp:** A treadmill-specific sequence: **30 seconds initial rest → 10 continuous 60-second running stages → 30 seconds final rest** (11 minutes total). The timer sounds a cue at the start of each stage so you can manually increase treadmill speed once per minute. No between-stage rests and no automatic speed changes. The ending rest applies only to this preset; editing the interval settings returns to standard interval mode.
 
 ## Deploy to GitHub Pages
 
@@ -42,4 +44,4 @@ Then open `http://localhost:8000`.
 - Works completely on the client. Settings only live in your browser's local storage.
 - Sound depends on the device's audio policy and volume; iPhones in Silent Mode may mute browser sounds. Vibration and Wake Lock depend on browser support.
 - The timer is most reliable with the site open and the screen awake. Background tab/browser suspension and device sleep can delay sound cues, though the visible countdown catches up from wall-clock time on return.
-- If you change source files after deployment, update `CACHE_NAME` in `sw.js` (for example, from `v1` to `v2`) to refresh the offline app cache.
+- When you deploy changes, update `CACHE_NAME` in `sw.js` to refresh the offline app cache. This release uses `v2`. If an older offline install persists, reload the page after the new service worker activates.

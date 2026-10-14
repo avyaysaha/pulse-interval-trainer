@@ -9,11 +9,12 @@
     rounds: { min: 1, max: 99, step: 1 },
     prep: { min: 0, max: 60, step: 1 },
   };
-  const DEFAULTS = { work: 40, rest: 20, rounds: 8, prep: 5, sound: true, vibrate: true };
+  const DEFAULTS = { work: 40, rest: 20, rounds: 8, prep: 5, mode: 'interval', finishRest: 0, sound: true, vibrate: true };
   const PRESETS = {
-    hiit: { work: 40, rest: 20, rounds: 8 },
-    tabata: { work: 20, rest: 10, rounds: 8 },
-    endurance: { work: 60, rest: 15, rounds: 5 },
+    hiit: { work: 40, rest: 20, rounds: 8, prep: 5, mode: 'interval', finishRest: 0 },
+    tabata: { work: 20, rest: 10, rounds: 8, prep: 5, mode: 'interval', finishRest: 0 },
+    endurance: { work: 60, rest: 15, rounds: 5, prep: 5, mode: 'interval', finishRest: 0 },
+    speedRamp: { work: 60, rest: 0, rounds: 10, prep: 30, mode: 'speedRamp', finishRest: 30 },
   };
   const CIRCUMFERENCE = 2 * Math.PI * 157;
 
@@ -33,7 +34,7 @@
     mainButtonIcon: $('#mainButtonIcon'), mainButtonText: $('#mainButtonText'),
     skipButton: $('#skipButton'), resetButton: $('#resetButton'),
     estimatedDuration: $('#estimatedDuration'), announcer: $('#announcer'),
-    timerCard: $('.timer-card'),
+    presetNote: $('#presetNote'), timerCard: $('.timer-card'),
   };
 
   function clampField(name, value, fallback = DEFAULTS[name]) {
@@ -48,6 +49,10 @@
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
       const result = { ...DEFAULTS };
       for (const key of Object.keys(LIMITS)) result[key] = clampField(key, stored[key], DEFAULTS[key]);
+      if (stored.mode === 'speedRamp' && result.work === 60 && result.rest === 0 && result.rounds === 10 && result.prep === 30) {
+        result.mode = 'speedRamp';
+        result.finishRest = 30;
+      }
       if (typeof stored.sound === 'boolean') result.sound = stored.sound;
       if (typeof stored.vibrate === 'boolean') result.vibrate = stored.vibrate;
       return result;
@@ -57,7 +62,7 @@
   let settings = loadSettings();
   // During a session, use a snapshot so changes cannot alter in-flight intervals.
   let config = null;
-  let phase = 'idle'; // idle | prep | work | rest | complete
+  let phase = 'idle'; // idle | prep | work | rest | cooldown | complete
   let running = false;
   let round = 1;
   let remainingMs = 0;
@@ -79,7 +84,7 @@
     return `${two(Math.floor(whole / 60))}:${two(whole % 60)}`;
   }
   function totalMs(c) {
-    return 1000 * (c.prep + c.work * c.rounds + c.rest * (c.rounds - 1));
+    return 1000 * (c.prep + c.work * c.rounds + c.rest * (c.rounds - 1) + c.finishRest);
   }
   function setAnnouncement(message) { refs.announcer.textContent = message; }
   function saveSettings() {
@@ -102,12 +107,17 @@
       : clock(seconds);
     refs.estimatedDuration.innerHTML = `${formatted} <small>${longerThanHour ? 'HRS' : 'MIN'}</small>`;
     markPreset();
+    refs.presetNote.hidden = settings.mode !== 'speedRamp';
     if (phase === 'idle') render();
   }
   function updateSetting(field, raw) {
     if (phase !== 'idle' && phase !== 'complete') return;
     if (phase === 'complete') resetSession();
     settings[field] = clampField(field, raw, settings[field]);
+    // Manually edited intervals are standard intervals; the special closing rest
+    // belongs only to the exact Speed Ramp preset.
+    settings.mode = 'interval';
+    settings.finishRest = 0;
     saveSettings();
     showSettings();
   }
@@ -121,7 +131,7 @@
   }
 
   function phaseLengthMs(next) {
-    return (next === 'prep' ? config.prep : next === 'work' ? config.work : next === 'rest' ? config.rest : 0) * 1000;
+    return (next === 'prep' ? config.prep : next === 'work' ? config.work : next === 'rest' ? config.rest : next === 'cooldown' ? config.finishRest : 0) * 1000;
   }
   function setPhase(next) {
     phase = next;
@@ -137,17 +147,20 @@
   function nextPhase() {
     if (phase === 'prep') setPhase('work');
     else if (phase === 'work') {
-      if (round >= config.rounds) setPhase('complete');
+      if (round >= config.rounds) setPhase(config.finishRest > 0 ? 'cooldown' : 'complete');
       else if (config.rest > 0) setPhase('rest');
       else { round += 1; setPhase('work'); }
     } else if (phase === 'rest') { round += 1; setPhase('work'); }
+    else if (phase === 'cooldown') setPhase('complete');
   }
 
   function elapsedMs() {
     if (phase === 'idle') return 0;
     if (phase === 'complete') return totalMs(config);
     let earlier = 0;
-    if (phase !== 'prep') {
+    if (phase === 'cooldown') {
+      earlier = 1000 * (config.prep + config.work * config.rounds + config.rest * (config.rounds - 1));
+    } else if (phase !== 'prep') {
       earlier = 1000 * (config.prep + (round - 1) * (config.work + config.rest));
       if (phase === 'rest') earlier += config.work * 1000;
     }
@@ -159,8 +172,16 @@
     const inactive = phase === 'idle';
     const complete = phase === 'complete';
     const seconds = inactive ? settings.work : complete ? 0 : remainingMs / 1000;
-    const phaseNames = { idle: 'READY', prep: 'GET READY', work: 'WORK', rest: 'REST', complete: 'COMPLETE' };
-    const phaseHints = { idle: 'SET YOUR PACE', prep: 'FIND YOUR POSITION', work: 'PUSH YOUR PACE', rest: 'BREATHE. RESET.', complete: 'YOU DID IT.' };
+    const isRamp = currentConfig.mode === 'speedRamp';
+    const phaseNames = { idle: 'READY', prep: isRamp ? 'START REST' : 'GET READY', work: isRamp ? 'SPEED RAMP' : 'WORK', rest: 'REST', cooldown: 'FINAL REST', complete: 'COMPLETE' };
+    const phaseHints = {
+      idle: 'SET YOUR PACE',
+      prep: isRamp ? '30 SEC BEFORE YOU RUN' : 'FIND YOUR POSITION',
+      work: isRamp ? (round === 1 ? 'START AT YOUR BASE PACE' : 'INCREASE TREADMILL SPEED') : 'PUSH YOUR PACE',
+      rest: 'BREATHE. RESET.',
+      cooldown: 'WALK IT OUT · RECOVER',
+      complete: 'YOU DID IT.',
+    };
     const visualName = !running && !inactive && !complete ? 'PAUSED' : phaseNames[phase];
     const hint = !running && !inactive && !complete ? `${phaseNames[phase]} · RESUME WHEN READY` : phaseHints[phase];
     const display = clock(seconds);
@@ -212,7 +233,15 @@
       remainingMs = Math.max(0, endsAt - now);
       if (transitions) {
         playCue(phase);
-        setAnnouncement(`${phase === 'work' ? 'Work' : phase === 'rest' ? 'Rest' : 'Get ready'}, round ${round} of ${config.rounds}.`);
+        if (phase === 'work' && config.mode === 'speedRamp') {
+          setAnnouncement(round === 1
+            ? 'Start running at your base speed. Minute 1 of 10.'
+            : `Increase treadmill speed. Minute ${round} of ${config.rounds}.`);
+        } else if (phase === 'cooldown') {
+          setAnnouncement('Final 30-second rest. Slow to a comfortable walk.');
+        } else {
+          setAnnouncement(`${phase === 'work' ? 'Work' : phase === 'rest' ? 'Rest' : 'Get ready'}, round ${round} of ${config.rounds}.`);
+        }
       }
     }
     render();
@@ -252,7 +281,7 @@
   function playCue(kind) {
     if (kind === 'prep') beep(520, 0.13);
     if (kind === 'work') { beep(860, 0.18); beep(1140, 0.22, 0.21); }
-    if (kind === 'rest') beep(530, 0.3);
+    if (kind === 'rest' || kind === 'cooldown') beep(530, 0.3);
     if (kind === 'complete') { beep(780, 0.15); beep(980, 0.15, 0.2); beep(1240, 0.45, 0.4); }
     if (settings.vibrate && navigator.vibrate) {
       try { navigator.vibrate(kind === 'complete' ? [150, 100, 150, 100, 300] : kind === 'work' ? [150, 80, 150] : 130); } catch { /* unsupported */ }
@@ -273,8 +302,10 @@
     running = true;
     endsAt = Date.now() + remainingMs;
     ensureAudio();
-    playCue(phase);
-    setAnnouncement(phase === 'prep' ? 'Get ready. Session starting.' : 'Work. Round 1.');
+    playCue(phase === 'prep' && config.mode === 'speedRamp' ? 'rest' : phase);
+    setAnnouncement(config.mode === 'speedRamp'
+      ? 'Start with 30 seconds of rest, then run 10 one-minute stages, increasing speed each minute.'
+      : phase === 'prep' ? 'Get ready. Session starting.' : 'Work. Round 1.');
     startInterval();
     render();
   }
@@ -323,7 +354,9 @@
         setAnnouncement('Session complete. Great work!');
       } else {
         playCue(phase);
-        setAnnouncement(`Skipped to ${phase}. Round ${round}.`);
+        setAnnouncement(phase === 'cooldown' ? 'Final 30-second rest.'
+          : phase === 'work' && config.mode === 'speedRamp' ? `Increase speed. Minute ${round} of ${config.rounds}.`
+          : `Skipped to ${phase}. Round ${round}.`);
       }
       render();
     }
