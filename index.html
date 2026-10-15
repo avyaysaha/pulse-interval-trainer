@@ -87,70 +87,93 @@
           <p class="visually-hidden" id="announcer" aria-live="polite" aria-atomic="true"></p>
         </section>
 
-        <section class="builder-card" aria-labelledby="builder-heading">
-          <div class="panel-header builder-heading-row">
-            <div>
-              <span class="panel-kicker">02 <span class="kicker-divider">/</span> CONFIGURE</span>
-              <h2 id="builder-heading">Make it yours<span>.</span></h2>
-            </div>
-            <span class="custom-tag">CUSTOM</span>
-          </div>
-          <p class="builder-description">Dial in your intervals. We'll handle the timing.</p>
-
-          <div class="settings-grid">
-            <div class="setting-field">
-              <label for="workSeconds">WORK <span>SECONDS</span></label>
-              <div class="stepper">
-                <button type="button" data-field="work" data-direction="-1" aria-label="Decrease work seconds">−</button>
-                <input id="workSeconds" data-setting="work" type="number" inputmode="numeric" min="1" max="3600" step="1" value="40" aria-label="Work interval in seconds" />
-                <button type="button" data-field="work" data-direction="1" aria-label="Increase work seconds">+</button>
+        <div class="side-stack">
+          <section class="presets-card" aria-labelledby="presets-heading">
+            <div class="panel-header builder-heading-row">
+              <div>
+                <span class="panel-kicker">02 <span class="kicker-divider">/</span> PRESETS</span>
+                <h2 id="presets-heading">Pick your pace<span>.</span></h2>
               </div>
+              <span class="custom-tag muted-tag">QUICK START</span>
             </div>
-            <div class="setting-field">
-              <label for="restSeconds">REST <span>SECONDS</span></label>
-              <div class="stepper">
-                <button type="button" data-field="rest" data-direction="-1" aria-label="Decrease rest seconds">−</button>
-                <input id="restSeconds" data-setting="rest" type="number" inputmode="numeric" min="0" max="3600" step="1" value="20" aria-label="Rest interval in seconds" />
-                <button type="button" data-field="rest" data-direction="1" aria-label="Increase rest seconds">+</button>
-              </div>
-            </div>
-            <div class="setting-field">
-              <label for="roundCount">ROUNDS <span>TOTAL</span></label>
-              <div class="stepper">
-                <button type="button" data-field="rounds" data-direction="-1" aria-label="Decrease rounds">−</button>
-                <input id="roundCount" data-setting="rounds" type="number" inputmode="numeric" min="1" max="99" step="1" value="8" aria-label="Number of rounds" />
-                <button type="button" data-field="rounds" data-direction="1" aria-label="Increase rounds">+</button>
-              </div>
-            </div>
-            <div class="setting-field">
-              <label for="prepSeconds">GET READY <span>SECONDS</span></label>
-              <div class="stepper">
-                <button type="button" data-field="prep" data-direction="-1" aria-label="Decrease preparation seconds">−</button>
-                <input id="prepSeconds" data-setting="prep" type="number" inputmode="numeric" min="0" max="60" step="1" value="5" aria-label="Preparation countdown in seconds" />
-                <button type="button" data-field="prep" data-direction="1" aria-label="Increase preparation seconds">+</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="presets-section">
-            <div class="section-label">QUICK START <span>PRESETS</span></div>
+            <p class="builder-description">Choose a workout or customize your own below.</p>
             <div class="preset-list">
-              <button type="button" class="preset-button" data-preset="hiit"><strong>HIIT</strong><span>40 / 20 · 8 rounds</span></button>
-              <button type="button" class="preset-button" data-preset="tabata"><strong>TABATA</strong><span>20 / 10 · 8 rounds</span></button>
-              <button type="button" class="preset-button" data-preset="endurance"><strong>ENDURANCE</strong><span>60 / 15 · 5 rounds</span></button>
-              <button type="button" class="preset-button" data-preset="speedRamp"><strong>SPEED RAMP ↗</strong><span>30s rest · 10 × 60s · 30s rest</span></button>
+              <button type="button" class="preset-button" data-preset="hiit"><strong>HIIT</strong><span>40s run · 20s rest<br>8 rounds</span></button>
+              <button type="button" class="preset-button" data-preset="tabata"><strong>TABATA</strong><span>20s run · 10s rest<br>8 rounds</span></button>
+              <button type="button" class="preset-button" data-preset="endurance"><strong>ENDURANCE</strong><span>60s run · 15s rest<br>5 rounds</span></button>
+              <button type="button" class="preset-button" data-preset="speedRamp"><strong>SPEED RAMP ↗</strong><span>10 × 60s · no breaks<br>30s warm up + cool down</span></button>
             </div>
-            <p id="presetNote" class="preset-note" hidden>Start with 30 seconds of rest, then run continuously for 10 minutes. At each beep, increase your treadmill speed. Finish with 30 seconds of rest. Total: <strong>11 minutes</strong>.</p>
-          </div>
+            <p id="presetNote" class="preset-note" hidden></p>
+          </section>
 
-          <div class="preferences">
-            <div class="section-label">PREFERENCES</div>
-            <label class="preference-row" for="soundToggle"><span class="preference-icon" aria-hidden="true">♫</span><span>Sound cues <small>Hear when intervals change</small></span><input type="checkbox" id="soundToggle" role="switch" checked /><span class="toggle-visual" aria-hidden="true"></span></label>
-            <label class="preference-row" for="vibrateToggle"><span class="preference-icon" aria-hidden="true">⌁</span><span>Vibration <small>On supported mobile devices</small></span><input type="checkbox" id="vibrateToggle" role="switch" checked /><span class="toggle-visual" aria-hidden="true"></span></label>
-          </div>
+          <section class="builder-card" aria-labelledby="builder-heading">
+            <div class="panel-header builder-heading-row">
+              <div>
+                <span class="panel-kicker">03 <span class="kicker-divider">/</span> CONFIGURE</span>
+                <h2 id="builder-heading">Make it yours<span>.</span></h2>
+              </div>
+              <span class="custom-tag">CUSTOMIZE</span>
+            </div>
+            <p class="builder-description">Set each phase in seconds. Warm Up runs first; Cool Down runs once at the end.</p>
+            <div class="settings-grid">
+              <div class="setting-field">
+                <label for="workSeconds">WORK <span>SECONDS</span></label>
+                <div class="stepper">
+                  <button type="button" data-field="work" data-direction="-1" aria-label="Decrease work seconds">−</button>
+                  <input id="workSeconds" data-setting="work" type="number" inputmode="numeric" min="1" max="3600" step="1" value="40" aria-label="Work interval in seconds" />
+                  <button type="button" data-field="work" data-direction="1" aria-label="Increase work seconds">+</button>
+                </div>
+              </div>
+              <div class="setting-field">
+                <label for="restSeconds">REST <span>SECONDS</span></label>
+                <div class="stepper">
+                  <button type="button" data-field="rest" data-direction="-1" aria-label="Decrease rest seconds">−</button>
+                  <input id="restSeconds" data-setting="rest" type="number" inputmode="numeric" min="0" max="3600" step="1" value="20" aria-label="Rest between rounds in seconds" />
+                  <button type="button" data-field="rest" data-direction="1" aria-label="Increase rest seconds">+</button>
+                </div>
+              </div>
+              <div class="setting-field">
+                <label for="roundCount">ROUNDS <span>TOTAL</span></label>
+                <div class="stepper">
+                  <button type="button" data-field="rounds" data-direction="-1" aria-label="Decrease rounds">−</button>
+                  <input id="roundCount" data-setting="rounds" type="number" inputmode="numeric" min="1" max="99" step="1" value="8" aria-label="Number of rounds" />
+                  <button type="button" data-field="rounds" data-direction="1" aria-label="Increase rounds">+</button>
+                </div>
+              </div>
+              <div class="setting-field">
+                <label for="warmupSeconds">WARM UP <span>SECONDS</span></label>
+                <div class="stepper">
+                  <button type="button" data-field="warmup" data-direction="-1" aria-label="Decrease warm up seconds">−</button>
+                  <input id="warmupSeconds" data-setting="warmup" type="number" inputmode="numeric" min="0" max="3600" step="1" value="5" aria-label="Warm up timer in seconds" />
+                  <button type="button" data-field="warmup" data-direction="1" aria-label="Increase warm up seconds">+</button>
+                </div>
+              </div>
+              <div class="setting-field setting-field-wide">
+                <label for="cooldownSeconds">COOL DOWN <span>SECONDS</span></label>
+                <div class="stepper">
+                  <button type="button" data-field="cooldown" data-direction="-1" aria-label="Decrease cool down seconds">−</button>
+                  <input id="cooldownSeconds" data-setting="cooldown" type="number" inputmode="numeric" min="0" max="3600" step="1" value="0" aria-label="Cool down timer in seconds" />
+                  <button type="button" data-field="cooldown" data-direction="1" aria-label="Increase cool down seconds">+</button>
+                </div>
+              </div>
+            </div>
+            <p class="phase-sequence">WARM UP <span>→</span> WORK ↔ REST <span>→</span> COOL DOWN</p>
+            <div class="session-summary"><span>ESTIMATED SESSION</span><strong id="estimatedDuration">07:45 <small>MIN</small></strong></div>
+          </section>
 
-          <div class="session-summary"><span>ESTIMATED SESSION</span><strong id="estimatedDuration">07:45 <small>MIN</small></strong></div>
-        </section>
+          <section class="preferences-card" aria-labelledby="preferences-heading">
+            <div class="panel-header builder-heading-row">
+              <div>
+                <span class="panel-kicker">04 <span class="kicker-divider">/</span> PREFERENCES</span>
+                <h2 id="preferences-heading">Your cues<span>.</span></h2>
+              </div>
+            </div>
+            <div class="preferences">
+              <label class="preference-row" for="soundToggle"><span class="preference-icon" aria-hidden="true">♫</span><span>Sound cues <small>Hear when intervals change</small></span><input type="checkbox" id="soundToggle" role="switch" checked /><span class="toggle-visual" aria-hidden="true"></span></label>
+              <label class="preference-row" for="vibrateToggle"><span class="preference-icon" aria-hidden="true">⌁</span><span>Vibration <small>On supported mobile devices</small></span><input type="checkbox" id="vibrateToggle" role="switch" checked /><span class="toggle-visual" aria-hidden="true"></span></label>
+            </div>
+          </section>
+        </div>
       </div>
     </main>
 

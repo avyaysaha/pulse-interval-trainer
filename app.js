@@ -2,19 +2,20 @@
 (() => {
   'use strict';
 
-  const STORAGE_KEY = 'pulse-interval-trainer-v1';
+  const STORAGE_KEY = 'pulse-interval-trainer-v1'; // Same key to migrate settings from earlier versions
   const LIMITS = {
     work: { min: 1, max: 3600, step: 5 },
     rest: { min: 0, max: 3600, step: 5 },
     rounds: { min: 1, max: 99, step: 1 },
-    prep: { min: 0, max: 60, step: 1 },
+    warmup: { min: 0, max: 3600, step: 5 },
+    cooldown: { min: 0, max: 3600, step: 5 },
   };
-  const DEFAULTS = { work: 40, rest: 20, rounds: 8, prep: 5, mode: 'interval', finishRest: 0, sound: true, vibrate: true };
+  const DEFAULTS = { work: 40, rest: 20, rounds: 8, warmup: 5, cooldown: 0, mode: 'interval', sound: true, vibrate: true };
   const PRESETS = {
-    hiit: { work: 40, rest: 20, rounds: 8, prep: 5, mode: 'interval', finishRest: 0 },
-    tabata: { work: 20, rest: 10, rounds: 8, prep: 5, mode: 'interval', finishRest: 0 },
-    endurance: { work: 60, rest: 15, rounds: 5, prep: 5, mode: 'interval', finishRest: 0 },
-    speedRamp: { work: 60, rest: 0, rounds: 10, prep: 30, mode: 'speedRamp', finishRest: 30 },
+    hiit: { work: 40, rest: 20, rounds: 8, warmup: 5, cooldown: 0, mode: 'interval' },
+    tabata: { work: 20, rest: 10, rounds: 8, warmup: 5, cooldown: 0, mode: 'interval' },
+    endurance: { work: 60, rest: 15, rounds: 5, warmup: 5, cooldown: 0, mode: 'interval' },
+    speedRamp: { work: 60, rest: 0, rounds: 10, warmup: 30, cooldown: 30, mode: 'speedRamp' },
   };
   const CIRCUMFERENCE = 2 * Math.PI * 157;
 
@@ -22,7 +23,7 @@
   const refs = {
     inputs: {
       work: $('#workSeconds'), rest: $('#restSeconds'),
-      rounds: $('#roundCount'), prep: $('#prepSeconds'),
+      rounds: $('#roundCount'), warmup: $('#warmupSeconds'), cooldown: $('#cooldownSeconds'),
     },
     sound: $('#soundToggle'), vibrate: $('#vibrateToggle'),
     phaseName: $('#phaseName'), phaseHint: $('#phaseHint'),
@@ -48,10 +49,14 @@
     try {
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
       const result = { ...DEFAULTS };
-      for (const key of Object.keys(LIMITS)) result[key] = clampField(key, stored[key], DEFAULTS[key]);
-      if (stored.mode === 'speedRamp' && result.work === 60 && result.rest === 0 && result.rounds === 10 && result.prep === 30) {
+      for (const key of Object.keys(LIMITS)) {
+        // Migrate "prep" and "finishRest" used by older releases.
+        const raw = key === 'warmup' ? (stored.warmup ?? stored.prep)
+          : key === 'cooldown' ? (stored.cooldown ?? stored.finishRest) : stored[key];
+        result[key] = clampField(key, raw, DEFAULTS[key]);
+      }
+      if (stored.mode === 'speedRamp' && result.work === 60 && result.rest === 0 && result.rounds === 10) {
         result.mode = 'speedRamp';
-        result.finishRest = 30;
       }
       if (typeof stored.sound === 'boolean') result.sound = stored.sound;
       if (typeof stored.vibrate === 'boolean') result.vibrate = stored.vibrate;
@@ -62,7 +67,7 @@
   let settings = loadSettings();
   // During a session, use a snapshot so changes cannot alter in-flight intervals.
   let config = null;
-  let phase = 'idle'; // idle | prep | work | rest | cooldown | complete
+  let phase = 'idle'; // idle | warmup | work | rest | cooldown | complete
   let running = false;
   let round = 1;
   let remainingMs = 0;
@@ -84,7 +89,7 @@
     return `${two(Math.floor(whole / 60))}:${two(whole % 60)}`;
   }
   function totalMs(c) {
-    return 1000 * (c.prep + c.work * c.rounds + c.rest * (c.rounds - 1) + c.finishRest);
+    return 1000 * (c.warmup + c.work * c.rounds + c.rest * (c.rounds - 1) + c.cooldown);
   }
   function setAnnouncement(message) { refs.announcer.textContent = message; }
   function saveSettings() {
@@ -108,16 +113,17 @@
     refs.estimatedDuration.innerHTML = `${formatted} <small>${longerThanHour ? 'HRS' : 'MIN'}</small>`;
     markPreset();
     refs.presetNote.hidden = settings.mode !== 'speedRamp';
+    if (settings.mode === 'speedRamp') {
+      refs.presetNote.textContent = `Warm up for ${settings.warmup}s, then run 10 continuous one-minute stages. Increase treadmill speed at each beep. Cool down for ${settings.cooldown}s.`;
+    }
     if (phase === 'idle') render();
   }
   function updateSetting(field, raw) {
     if (phase !== 'idle' && phase !== 'complete') return;
     if (phase === 'complete') resetSession();
     settings[field] = clampField(field, raw, settings[field]);
-    // Manually edited intervals are standard intervals; the special closing rest
-    // belongs only to the exact Speed Ramp preset.
-    settings.mode = 'interval';
-    settings.finishRest = 0;
+    // Keep the treadmill ramp cues when only warm up or cool down is edited.
+    if (!['warmup', 'cooldown'].includes(field)) settings.mode = 'interval';
     saveSettings();
     showSettings();
   }
@@ -131,7 +137,7 @@
   }
 
   function phaseLengthMs(next) {
-    return (next === 'prep' ? config.prep : next === 'work' ? config.work : next === 'rest' ? config.rest : next === 'cooldown' ? config.finishRest : 0) * 1000;
+    return (next === 'warmup' ? config.warmup : next === 'work' ? config.work : next === 'rest' ? config.rest : next === 'cooldown' ? config.cooldown : 0) * 1000;
   }
   function setPhase(next) {
     phase = next;
@@ -145,9 +151,9 @@
     }
   }
   function nextPhase() {
-    if (phase === 'prep') setPhase('work');
+    if (phase === 'warmup') setPhase('work');
     else if (phase === 'work') {
-      if (round >= config.rounds) setPhase(config.finishRest > 0 ? 'cooldown' : 'complete');
+      if (round >= config.rounds) setPhase(config.cooldown > 0 ? 'cooldown' : 'complete');
       else if (config.rest > 0) setPhase('rest');
       else { round += 1; setPhase('work'); }
     } else if (phase === 'rest') { round += 1; setPhase('work'); }
@@ -159,9 +165,9 @@
     if (phase === 'complete') return totalMs(config);
     let earlier = 0;
     if (phase === 'cooldown') {
-      earlier = 1000 * (config.prep + config.work * config.rounds + config.rest * (config.rounds - 1));
-    } else if (phase !== 'prep') {
-      earlier = 1000 * (config.prep + (round - 1) * (config.work + config.rest));
+      earlier = 1000 * (config.warmup + config.work * config.rounds + config.rest * (config.rounds - 1));
+    } else if (phase !== 'warmup') {
+      earlier = 1000 * (config.warmup + (round - 1) * (config.work + config.rest));
       if (phase === 'rest') earlier += config.work * 1000;
     }
     return earlier + phaseDurationMs - remainingMs;
@@ -173,13 +179,13 @@
     const complete = phase === 'complete';
     const seconds = inactive ? settings.work : complete ? 0 : remainingMs / 1000;
     const isRamp = currentConfig.mode === 'speedRamp';
-    const phaseNames = { idle: 'READY', prep: isRamp ? 'START REST' : 'GET READY', work: isRamp ? 'SPEED RAMP' : 'WORK', rest: 'REST', cooldown: 'FINAL REST', complete: 'COMPLETE' };
+    const phaseNames = { idle: 'READY', warmup: 'WARM UP', work: isRamp ? 'SPEED RAMP' : 'WORK', rest: 'REST', cooldown: 'COOL DOWN', complete: 'COMPLETE' };
     const phaseHints = {
       idle: 'SET YOUR PACE',
-      prep: isRamp ? '30 SEC BEFORE YOU RUN' : 'FIND YOUR POSITION',
+      warmup: isRamp ? 'GET READY FOR YOUR RUN' : 'EASE INTO THE SESSION',
       work: isRamp ? (round === 1 ? 'START AT YOUR BASE PACE' : 'INCREASE TREADMILL SPEED') : 'PUSH YOUR PACE',
       rest: 'BREATHE. RESET.',
-      cooldown: 'WALK IT OUT · RECOVER',
+      cooldown: 'EASE DOWN · RECOVER',
       complete: 'YOU DID IT.',
     };
     const visualName = !running && !inactive && !complete ? 'PAUSED' : phaseNames[phase];
@@ -238,9 +244,9 @@
             ? 'Start running at your base speed. Minute 1 of 10.'
             : `Increase treadmill speed. Minute ${round} of ${config.rounds}.`);
         } else if (phase === 'cooldown') {
-          setAnnouncement('Final 30-second rest. Slow to a comfortable walk.');
+          setAnnouncement(`Cool down for ${config.cooldown} seconds. Slow to a comfortable pace.`);
         } else {
-          setAnnouncement(`${phase === 'work' ? 'Work' : phase === 'rest' ? 'Rest' : 'Get ready'}, round ${round} of ${config.rounds}.`);
+          setAnnouncement(`${phase === 'work' ? 'Work' : phase === 'rest' ? 'Rest' : 'Warm up'}, round ${round} of ${config.rounds}.`);
         }
       }
     }
@@ -279,7 +285,7 @@
     } catch { /* cue support optional */ }
   }
   function playCue(kind) {
-    if (kind === 'prep') beep(520, 0.13);
+    if (kind === 'warmup') beep(520, 0.13);
     if (kind === 'work') { beep(860, 0.18); beep(1140, 0.22, 0.21); }
     if (kind === 'rest' || kind === 'cooldown') beep(530, 0.3);
     if (kind === 'complete') { beep(780, 0.15); beep(980, 0.15, 0.2); beep(1240, 0.45, 0.4); }
@@ -298,14 +304,14 @@
   function startSession() {
     config = { ...settings };
     round = 1;
-    setPhase(config.prep > 0 ? 'prep' : 'work');
+    setPhase(config.warmup > 0 ? 'warmup' : 'work');
     running = true;
     endsAt = Date.now() + remainingMs;
     ensureAudio();
-    playCue(phase === 'prep' && config.mode === 'speedRamp' ? 'rest' : phase);
+    playCue(phase === 'warmup' && config.mode === 'speedRamp' ? 'rest' : phase);
     setAnnouncement(config.mode === 'speedRamp'
-      ? 'Start with 30 seconds of rest, then run 10 one-minute stages, increasing speed each minute.'
-      : phase === 'prep' ? 'Get ready. Session starting.' : 'Work. Round 1.');
+      ? `Warm up for ${config.warmup} seconds, then run ten one-minute stages, increasing treadmill speed each minute.`
+      : phase === 'warmup' ? 'Warm up. Session starting.' : 'Work. Round 1.');
     startInterval();
     render();
   }
@@ -354,7 +360,7 @@
         setAnnouncement('Session complete. Great work!');
       } else {
         playCue(phase);
-        setAnnouncement(phase === 'cooldown' ? 'Final 30-second rest.'
+        setAnnouncement(phase === 'cooldown' ? `Cool down for ${config.cooldown} seconds.`
           : phase === 'work' && config.mode === 'speedRamp' ? `Increase speed. Minute ${round} of ${config.rounds}.`
           : `Skipped to ${phase}. Round ${round}.`);
       }
