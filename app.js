@@ -196,7 +196,7 @@
     refs.phaseName.textContent = visualName;
     refs.phaseHint.textContent = hint;
     refs.countdown.textContent = display;
-    refs.timerRing.setAttribute('aria-label', `Time remaining: ${Math.ceil(seconds)} seconds. ${visualName.toLowerCase()}.`);
+    refs.timerRing.setAttribute('aria-label', `Time remaining: ${Math.ceil(seconds)} seconds. ${visualName.toLowerCase()}. Tap to play or pause; double tap to skip.`);
     refs.statusText.textContent = complete ? 'DONE' : !running && !inactive ? 'PAUSED' : phaseNames[phase];
     refs.roundCurrent.textContent = two(inactive ? 1 : round);
     refs.roundTotal.textContent = two(currentConfig.rounds);
@@ -368,10 +368,63 @@
     }
   }
 
+  function showScreen(screen) {
+    clearTimeout(timerTapTimeout);
+    timerTapTimeout = null;
+    const timer = screen === 'timer';
+    document.body.dataset.screen = screen;
+    refs.timerCard.hidden = !timer;
+    $('#setupScreen').hidden = timer;
+    $('#screenDescription').textContent = timer
+      ? 'Build your rhythm. Own your rounds.'
+      : "Pick your preset. Make it yours. Then let's go.";
+    (timer ? refs.mainButton : $('#letsGoButton')).focus({ preventScroll: true });
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+  $('#customizePresets').addEventListener('click', () => {
+    const panel = $('#configurePanel');
+    const expanded = panel.hidden;
+    panel.hidden = !expanded;
+    $('#customizePresets').setAttribute('aria-expanded', String(expanded));
+    $('#setupScreen').dataset.customizing = String(expanded);
+    if (expanded) {
+      $('#builder-heading').focus({ preventScroll: true });
+      panel.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
+    }
+  });
+  $('#letsGoButton').addEventListener('click', () => {
+    for (const [field, input] of Object.entries(refs.inputs)) updateSetting(field, input.value);
+    showSettings();
+    showScreen('timer');
+  });
+  $('#backToSetup').addEventListener('click', () => {
+    resetSession();
+    showScreen('setup');
+  });
+
   refs.mainButton.addEventListener('click', () => {
     if (phase === 'idle' || phase === 'complete') startSession();
     else if (running) pauseSession();
     else resumeSession();
+  });
+  // Delay a single tap briefly so a double tap only skips, without toggling playback.
+  let timerTapTimeout = null;
+  refs.timerCard.addEventListener('click', (event) => {
+    if (event.target.closest('button') && !event.target.closest('#timerRing')) return;
+    if (event.detail === 0) {
+      refs.mainButton.click();
+      return;
+    }
+    if (timerTapTimeout !== null) {
+      clearTimeout(timerTapTimeout);
+      timerTapTimeout = null;
+      skipPhase();
+    } else {
+      timerTapTimeout = setTimeout(() => {
+        timerTapTimeout = null;
+        refs.mainButton.click();
+      }, 300);
+    }
   });
   refs.skipButton.addEventListener('click', skipPhase);
   refs.resetButton.addEventListener('click', resetSession);
@@ -408,7 +461,7 @@
     saveSettings();
   });
   document.addEventListener('keydown', (event) => {
-    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    if (document.body.dataset.screen !== 'timer' || event.altKey || event.ctrlKey || event.metaKey) return;
     const tag = event.target?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'BUTTON' || tag === 'SELECT' || event.target?.isContentEditable) return;
     if (event.code === 'Space') {
