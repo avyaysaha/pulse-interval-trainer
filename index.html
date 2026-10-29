@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0e13" />
+  <meta name="description" content="A focused, customizable workout interval timer. Set your work, rest, and rounds. No account, no ads, no fuss." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Pulse" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+  <link rel="apple-touch-icon" href="./icon-192.png" />
+  <link rel="stylesheet" href="./styles.css" />
+  <script src="./app.js" defer></script>
+  <title>Pulse — Interval Trainer</title>
+</head>
+<body data-phase="idle" data-screen="setup">
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="Pulse home">
+        <span class="brand-mark" aria-hidden="true"><span></span></span>
+        <span class="brand-name">pulse<span class="brand-dot">.</span></span>
+        <span class="brand-divider" aria-hidden="true"></span>
+        <span class="brand-subtitle">INTERVAL TRAINER</span>
+      </a>
+      <div class="topbar-end"><span class="topbar-indicator" aria-hidden="true"></span> KEEP MOVING</div>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="page-heading">
+        <span class="eyebrow"><span class="eyebrow-line"></span> TRAIN WITH INTENTION</span>
+        <h1 id="page-heading">Every second <em>counts.</em></h1>
+        <p id="screenDescription">Pick your preset. Make it yours. Then let's go.</p>
+      </section>
+
+      <div class="workspace">
+        <section class="timer-card" aria-label="Workout timer" hidden>
+          <button class="back-button" id="backToSetup" type="button">&larr; Back to setup</button>
+          <div class="panel-header">
+            <span class="panel-kicker">YOUR SESSION</span>
+            <span class="status-pill" id="statusPill"><span class="status-dot"></span><span id="statusText">READY</span></span>
+          </div>
+
+          <div class="timer-center">
+            <button type="button" class="timer-ring" id="timerRing" aria-label="Time remaining: 40 seconds. Tap to start or pause; double tap to skip.">
+              <svg class="ring-svg" viewBox="0 0 360 360" aria-hidden="true">
+                <circle class="ring-track" cx="180" cy="180" r="157"></circle>
+                <circle class="ring-progress" id="ringProgress" cx="180" cy="180" r="157"></circle>
+              </svg>
+              <div class="ring-inner">
+                <span class="phase-name" id="phaseName">READY</span>
+                <strong class="countdown" id="countdown">00:40</strong>
+                <span class="phase-hint" id="phaseHint">SET YOUR PACE</span>
+              </div>
+            </button>
+          </div>
+
+          <div class="progress-panel">
+            <div class="progress-heading">
+              <div>
+                <span class="progress-label">CURRENT ROUND</span>
+                <div class="round-value"><strong id="roundCurrent">01</strong> <span>/ <span id="roundTotal">08</span></span></div>
+              </div>
+              <div class="progress-right">
+                <span class="progress-label">SESSION COMPLETE</span>
+                <strong class="percent-value" id="progressPercent">0%</strong>
+              </div>
+            </div>
+            <div class="progress-track" role="progressbar" aria-label="Session progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="sessionProgress">
+              <div class="progress-fill" id="progressFill"></div>
+            </div>
+          </div>
+
+          <div class="timer-actions">
+            <button class="primary-button" id="mainButton" type="button">
+              <svg id="mainButtonIcon" viewBox="0 0 24 24" width="19" height="19" fill="currentColor" aria-hidden="true"><path d="M8 5.5a1 1 0 0 1 1.54-.84l10 6.5a1 1 0 0 1 0 1.68l-10 6.5A1 1 0 0 1 8 18.5z" /></svg>
+              <span id="mainButtonText">START SESSION</span>
+            </button>
+            <button class="secondary-button icon-button" id="skipButton" type="button" aria-label="Skip to next interval" title="Skip interval" disabled>
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m4 5 9 7-9 7V5ZM14 5l8 7-8 7V5Z" /></svg>
+            </button>
+            <button class="secondary-button icon-button" id="resetButton" type="button" aria-label="Reset session" title="Reset session" disabled>
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11a9 9 0 1 1 2.6 6.4M3 4v7h7" /></svg>
+            </button>
+          </div>
+          <div class="shortcuts"><strong class="tap-instructions">Tap timer once to play/pause. Tap timer twice to skip</strong><span class="keyboard-instructions">PRESS <kbd>SPACE</kbd> TO PAUSE / RESUME &nbsp;&middot;&nbsp; <kbd>&rarr;</kbd> TO SKIP</span></div>
+          <p class="visually-hidden" id="announcer" aria-live="polite" aria-atomic="true"></p>
+        </section>
+
+        <div class="side-stack" id="setupScreen" data-customizing="false">
+          <section class="presets-card" aria-labelledby="presets-heading">
+            <div class="panel-header builder-heading-row">
+              <div>
+                <span class="panel-kicker">QUICK START</span>
+                <h2 id="presets-heading">Pick your pace<span>.</span></h2>
+              </div>
+              <button class="custom-tag customize-button" id="customizePresets" type="button" aria-expanded="false" aria-controls="configurePanel">Customize</button>
+            </div>
+            <p class="builder-description">Choose a workout or customize your intervals.</p>
+            <div class="preset-list">
+              <button type="button" class="preset-button" data-preset="hiit"><strong>HIIT</strong><span>40s run · 20s rest<br>8 rounds</span></button>
+              <button type="button" class="preset-button" data-preset="tabata"><strong>TABATA</strong><span>20s run · 10s rest<br>8 rounds</span></button>
+              <button type="button" class="preset-button" data-preset="endurance"><strong>ENDURANCE</strong><span>60s run · 15s rest<br>5 rounds</span></button>
+              <button type="button" class="preset-button" data-preset="speedRamp"><strong>SPEED RAMP ↗</strong><span>10 × 60s · no breaks<br>30s warm up + cool down</span></button>
+            </div>
+            <p id="presetNote" class="preset-note" hidden></p>
+          </section>
+
+          <section class="builder-card" id="configurePanel" aria-labelledby="builder-heading" hidden>
+            <div class="panel-header builder-heading-row">
+              <div>
+                <span class="panel-kicker">CONFIGURE</span>
+                <h2 id="builder-heading" tabindex="-1">Make it yours<span>.</span></h2>
+              </div>
+              <span class="custom-tag">CUSTOMIZE</span>
+            </div>
+            <p class="builder-description">Set each phase in seconds. Warm Up runs first; Cool Down runs once at the end.</p>
+            <div class="settings-grid">
+              <div class="setting-field">
+                <label for="workSeconds">WORK <span>SECONDS</span></label>
+                <div class="stepper">
+                  <button type="button" data-field="work" data-direction="-1" aria-label="Decrease work seconds">−</button>
+                  <input id="workSeconds" data-setting="work" type="number" inputmode="numeric" min="1" max="3600" step="1" value="40" aria-label="Work interval in seconds" />
+                  <button type="button" data-field="work" data-direction="1" aria-label="Increase work seconds">+</button>
+                </div>
+              </div>
+              <div class="setting-field">
+                <label for="restSeconds">REST <span>SECONDS</span></label>
+                <div class="stepper">
+                  <button type="button" data-field="rest" data-direction="-1" aria-label="Decrease rest seconds">−</button>
+                  <input id="restSeconds" data-setting="rest" type="number" inputmode="numeric" min="0" max="3600" step="1" value="20" aria-label="Rest between rounds in seconds" />
+                  <button type="button" data-field="rest" data-direction="1" aria-label="Increase rest seconds">+</button>
+                </div>
+              </div>
+              <div class="setting-field">
+                <label for="roundCount">ROUNDS <span>TOTAL</span></label>
+                <div class="stepper">
+                  <button type="button" data-field="rounds" data-direction="-1" aria-label="Decrease rounds">−</button>
+                  <input id="roundCount" data-setting="rounds" type="number" inputmode="numeric" min="1" max="99" step="1" value="8" aria-label="Number of rounds" />
+                  <button type="button" data-field="rounds" data-direction="1" aria-label="Increase rounds">+</button>
+                </div>
+              </div>
+              <div class="setting-field">
+                <label for="warmupSeconds">WARM UP <span>SECONDS</span></label>
+                <div class="stepper">
+                  <button type="button" data-field="warmup" data-direction="-1" aria-label="Decrease warm up seconds">−</button>
+                  <input id="warmupSeconds" data-setting="warmup" type="number" inputmode="numeric" min="0" max="3600" step="1" value="5" aria-label="Warm up timer in seconds" />
+                  <button type="button" data-field="warmup" data-direction="1" aria-label="Increase warm up seconds">+</button>
+                </div>
+              </div>
+              <div class="setting-field setting-field-wide">
+                <label for="cooldownSeconds">COOL DOWN <span>SECONDS</span></label>
+                <div class="stepper">
+                  <button type="button" data-field="cooldown" data-direction="-1" aria-label="Decrease cool down seconds">−</button>
+                  <input id="cooldownSeconds" data-setting="cooldown" type="number" inputmode="numeric" min="0" max="3600" step="1" value="0" aria-label="Cool down timer in seconds" />
+                  <button type="button" data-field="cooldown" data-direction="1" aria-label="Increase cool down seconds">+</button>
+                </div>
+              </div>
+            </div>
+            <p class="phase-sequence">WARM UP <span>→</span> WORK ↔ REST <span>→</span> COOL DOWN</p>
+          </section>
+
+          <section class="preferences-card" aria-labelledby="preferences-heading">
+            <div class="panel-header builder-heading-row">
+              <div>
+                <span class="panel-kicker">PREFERENCES</span>
+                <h2 id="preferences-heading">Your cues<span>.</span></h2>
+              </div>
+            </div>
+            <div class="preferences">
+              <label class="preference-row" for="soundToggle"><span class="preference-icon" aria-hidden="true">♫</span><span>Sound cues <small>Hear when intervals change</small></span><input type="checkbox" id="soundToggle" role="switch" checked /><span class="toggle-visual" aria-hidden="true"></span></label>
+              <label class="preference-row" for="vibrateToggle"><span class="preference-icon" aria-hidden="true">⌁</span><span>Vibration <small>On supported mobile devices</small></span><input type="checkbox" id="vibrateToggle" role="switch" checked /><span class="toggle-visual" aria-hidden="true"></span></label>
+            </div>
+          </section>
+          <div class="setup-actions"><div class="session-summary"><span>ESTIMATED SESSION</span><strong id="estimatedDuration">07:45 <small>MIN</small></strong></div><button class="primary-button" id="letsGoButton" type="button">Let's go <span aria-hidden="true">&rarr;</span></button></div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer"><span>BUILT FOR THE NEXT REP.</span><span>NO ACCOUNTS. NO ADS. JUST YOU.</span></footer>
+  </div>
+</body>
+</html>
